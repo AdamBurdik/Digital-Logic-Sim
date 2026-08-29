@@ -31,11 +31,13 @@ namespace DLS.Description
 	public struct OutputPinColourInfo
 	{
 		public PinColour PinColour;
+		public Color? CustomColour; // Arbitrary colour overriding PinColour. Null = use theme colour for PinColour.
 		public int PinID;
 
 		public OutputPinColourInfo(PinColour pinColour, int pinID)
 		{
 			PinColour = pinColour;
+			CustomColour = null;
 			PinID = pinID;
 		}
 	}

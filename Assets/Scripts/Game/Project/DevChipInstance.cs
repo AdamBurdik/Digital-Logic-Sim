@@ -67,6 +67,7 @@ namespace DLS.Game
 			description.InputPins ??= Array.Empty<PinDescription>();
 			description.OutputPins ??= Array.Empty<PinDescription>();
 			description.Wires ??= Array.Empty<WireDescription>();
+			description.Notes ??= Array.Empty<NoteDescription>();
 
 			bool anyElementFailedToLoad = false;
 
@@ -108,6 +109,13 @@ namespace DLS.Game
 
 				loadedWiresWithOriginalIndices[i] = loadedWire;
 				anyElementFailedToLoad |= failed;
+			}
+
+			// ---- Load notes ----
+			foreach (NoteDescription noteDesc in description.Notes)
+			{
+				NoteInstance note = new(noteDesc.ID, noteDesc.Position, noteDesc.Text, noteDesc.Size);
+				instance.AddNote(note, true);
 			}
 
 			instance.RegenerateParentChipNamesHash();
@@ -242,6 +250,16 @@ namespace DLS.Game
 			{
 				Simulator.AddConnection(SimChip, wire.SourcePin.Address, wire.TargetPin.Address);
 			}
+		}
+
+		public void AddNote(NoteInstance note, bool isLoading)
+		{
+			AddElement(note);
+		}
+
+		public void DeleteNote(NoteInstance note)
+		{
+			RemoveElement(note);
 		}
 
 		void AddElement(IMoveable element)
@@ -525,6 +543,8 @@ namespace DLS.Game
 		}
 
 		public IEnumerable<SubChipInstance> GetSubchips() => Elements.OfType<SubChipInstance>();
+
+		public IEnumerable<NoteInstance> GetNotes() => Elements.OfType<NoteInstance>();
 
 		public IEnumerable<DevPinInstance> GetOutputPins()
 		{

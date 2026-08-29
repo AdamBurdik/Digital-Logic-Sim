@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace DLS.Description
 {
@@ -27,6 +28,9 @@ namespace DLS.Description
 
 		public List<StarredItem> StarredList;
 		public List<ChipCollection> ChipCollections;
+
+		// Recently used custom pin/wire colours (most recent first, max RecentColoursLimit)
+		public List<Color> RecentPinColours;
 
 		// ---- Helper functions ----
 		public bool IsStarred(string chipName, bool isCollection)

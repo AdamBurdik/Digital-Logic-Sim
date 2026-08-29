@@ -9,6 +9,7 @@ namespace DLS.Description
 		public Vector2 Position;
 		public PinBitCount BitCount;
 		public PinColour Colour;
+		public Color? CustomColour; // Arbitrary colour overriding Colour. Null = use theme colour for Colour enum.
 		public PinValueDisplayMode ValueDisplayMode;
 
 		public PinDescription(string name, int id, Vector2 position, PinBitCount bitCount, PinColour colour, PinValueDisplayMode valueDisplayMode)
@@ -19,6 +20,7 @@ namespace DLS.Description
 			BitCount = bitCount;
 			Colour = colour;
 			ValueDisplayMode = valueDisplayMode;
+			CustomColour = null;
 		}
 	}
 

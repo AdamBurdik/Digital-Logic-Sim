@@ -24,6 +24,7 @@ namespace DLS.SaveSystem
 			PinDescription[] inputPins = OrderPins(chip.GetInputPins()).Select(CreatePinDescription).ToArray();
 			PinDescription[] outputPins = OrderPins(chip.GetOutputPins()).Select(CreatePinDescription).ToArray();
 			SubChipDescription[] subchips = chip.GetSubchips().Select(CreateSubChipDescription).ToArray();
+			NoteDescription[] notes = chip.GetNotes().Select(CreateNoteDescription).ToArray();
 			Vector2 minChipsSize = SubChipInstance.CalculateMinChipSize(inputPins, outputPins, name);
 			size = Vector2.Max(minChipsSize, size);
 
@@ -42,6 +43,7 @@ namespace DLS.SaveSystem
 				InputPins = inputPins,
 				OutputPins = outputPins,
 				Wires = chip.Wires.Select(CreateWireDescription).ToArray(),
+				Notes = notes,
 				Displays = displays,
 				ChipType = ChipType.Custom
 			};
@@ -55,6 +57,17 @@ namespace DLS.SaveSystem
 
 		public static SubChipDescription CreateSubChipDescription(SubChipInstance subChip)
 		{
+			OutputPinColourInfo[] outputColInfo = null;
+			if (!subChip.IsBus)
+			{
+				outputColInfo = subChip.OutputPins.Select(p =>
+				{
+					OutputPinColourInfo info = new(p.Colour, p.Address.PinID);
+					info.CustomColour = p.CustomColour;
+					return info;
+				}).ToArray();
+			}
+
 			return new SubChipDescription
 			(
 				subChip.Description.Name,
@@ -62,7 +75,7 @@ namespace DLS.SaveSystem
 				subChip.Label,
 				subChip.Position,
 				// Don't save colour info for bus since it changes based on received input, so would just trigger unnecessary 'unsaved changes' warnings
-				subChip.IsBus ? null : subChip.OutputPins.Select(p => new OutputPinColourInfo(p.Colour, p.Address.PinID)).ToArray(),
+				outputColInfo,
 				(uint[])subChip.InternalData?.Clone()
 			);
 		}
@@ -150,8 +163,9 @@ namespace DLS.SaveSystem
 			};
 		}
 
-		public static PinDescription CreatePinDescription(DevPinInstance devPin) =>
-			new(
+		public static PinDescription CreatePinDescription(DevPinInstance devPin)
+		{
+			PinDescription desc = new(
 				devPin.Pin.Name,
 				devPin.ID,
 				devPin.Position,
@@ -159,6 +173,18 @@ namespace DLS.SaveSystem
 				// Don't save colour info for output pin since it changes based on received input, so would just trigger unecessary 'unsaved changes' warnings
 				devPin.IsInputPin ? devPin.Pin.Colour : default,
 				devPin.pinValueDisplayMode
+			);
+			// Custom colours saved for both input and output pins (output pin colour is dynamic, but custom colour overrides it and should persist)
+			desc.CustomColour = devPin.Pin.CustomColour;
+			return desc;
+		}
+
+		public static NoteDescription CreateNoteDescription(NoteInstance note) =>
+			new(
+				note.ID,
+				note.Position,
+				note.Text,
+				note.Size
 			);
 
 		static Color RandomInitialChipColour()

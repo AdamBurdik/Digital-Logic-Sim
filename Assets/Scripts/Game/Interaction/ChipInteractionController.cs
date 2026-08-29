@@ -129,6 +129,7 @@ namespace DLS.Game
 			{
 				if (element is SubChipInstance subChip) ActiveDevChip.DeleteSubChip(subChip);
 				else if (element is DevPinInstance devPin) ActiveDevChip.DeleteDevPin(devPin);
+				else if (element is NoteInstance note) ActiveDevChip.DeleteNote(note);
 			}
 
 			if (clearSelection) SelectedElements.Clear();
@@ -600,6 +601,7 @@ namespace DLS.Game
 					ActiveDevChip.AddNewSubChip(subchip, false);
 				}
 				else if (elementToPlace is DevPinInstance devPin) ActiveDevChip.AddNewDevPin(devPin, false);
+				else if (elementToPlace is NoteInstance note) ActiveDevChip.AddNote(note, false);
 			}
 
 			foreach (WireInstance wire in DuplicatedWires)
@@ -752,12 +754,15 @@ namespace DLS.Game
 
 					// Test if is legal position
 					bool legal = true;
-					foreach (IMoveable obstacle in Obstacles)
+					if (!(element is NoteInstance))
 					{
-						if (element.BoundingBox.Overlaps(obstacle.BoundingBox))
+						foreach (IMoveable obstacle in Obstacles)
 						{
-							legal = false;
-							break;
+							if (element.BoundingBox.Overlaps(obstacle.BoundingBox))
+							{
+								legal = false;
+								break;
+							}
 						}
 					}
 
@@ -810,7 +815,7 @@ namespace DLS.Game
 				moveableElement.HasReferencePointForStraightLineMovement = true;
 			}
 
-			Obstacles = ActiveDevChip.Elements.Where(e => !e.IsSelected).ToArray();
+			Obstacles = ActiveDevChip.Elements.Where(e => !e.IsSelected && e is not NoteInstance).ToArray();
 		}
 
 		bool TryFinishPlacingWire()
@@ -868,6 +873,13 @@ namespace DLS.Game
 			StartPlacing(chipDescription, InputHelper.MousePosWorld, false);
 		}
 
+		public void StartPlacingNote()
+		{
+			NoteInstance note = new(IDGenerator.GenerateNewElementID(ActiveDevChip), InputHelper.MousePosWorld, string.Empty, Vector2.zero);
+			note.Size = note.AutoSize;
+			StartPlacing(note, InputHelper.MousePosWorld, false);
+		}
+
 		public IMoveable StartPlacing(ChipDescription chipDescription, Vector2 position, bool isDuplicating)
 		{
 			IMoveable elementToPlace = CreateElementFromChipDescription(chipDescription);
@@ -890,7 +902,8 @@ namespace DLS.Game
 
 			ChipType chipType;
 			if (elementToPlace is DevPinInstance devPin) chipType = ChipTypeHelper.GetPinType(devPin.IsInputPin, devPin.BitCount);
-			else chipType = ((SubChipInstance)elementToPlace).ChipType;
+			else if (elementToPlace is SubChipInstance subChip) chipType = subChip.ChipType;
+			else chipType = ChipType.Custom; // NoteInstance (bus logic does not apply)
 
 			// Place bus terminus to right of bus origin
 			if (ChipTypeHelper.IsBusTerminusType(chipType) && !isDuplicating)
@@ -973,6 +986,10 @@ namespace DLS.Game
 				PinDescription pinDesc = DescriptionCreator.CreatePinDescription(devPinSrc);
 				pinDesc.ID = instanceID;
 				element = new DevPinInstance(pinDesc, devPinSrc.IsInputPin);
+			}
+			else if (duplicationSource is NoteInstance noteSrc)
+			{
+				element = new NoteInstance(instanceID, noteSrc.Position, noteSrc.Text, noteSrc.Size);
 			}
 			else
 			{

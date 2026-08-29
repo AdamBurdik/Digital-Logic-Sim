@@ -14,6 +14,7 @@ namespace DLS.Graphics
 	public static class ContextMenu
 	{
 		const int pad = 10;
+		public const int RecentColoursLimit = 8;
 		const string menuDividerString = "#--#";
 		static string interactionContextName;
 		static bool bottomBarItemIsCollection;
@@ -26,7 +27,11 @@ namespace DLS.Graphics
 
 		static readonly MenuEntry[] pinColEntries = ((PinColour[])Enum.GetValues(typeof(PinColour))).Select(col =>
 			new MenuEntry(Format(Enum.GetName(typeof(PinColour), col)), () => SetCol(col), CanSetCol)
-		).ToArray();
+		).Concat(new[]
+		{
+			dividerMenuEntry,
+			new MenuEntry(Format("MORE..."), OpenMoreColours, CanPickCustomColour)
+		}).ToArray();
 
 
 		static readonly MenuEntry deleteEntry = new(Format("DELETE"), Delete, CanDelete);
@@ -115,6 +120,17 @@ namespace DLS.Graphics
 			new(Format("UN-STAR"), UnstarBottomBarEntry, () => true)
 		};
 
+		static readonly MenuEntry[] entries_note =
+		{
+			new(Format("EDIT"), OpenNoteEditMenu, CanEditCurrentChip),
+			deleteEntry
+		};
+
+		static readonly MenuEntry[] entries_emptySpace =
+		{
+			new(Format("ADD NOTE"), AddNoteOnEmptySpace, CanEditCurrentChip)
+		};
+
 		public static bool IsOpen { get; private set; }
 		public static IInteractable interactionContext { get; private set; }
 
@@ -159,14 +175,22 @@ namespace DLS.Graphics
 				bool openDevPinContextMenu = (hoverElement is PinInstance pin && pin.parent is DevPinInstance) || hoverElement is DevPinInstance;
 				bool openWireContextMenu = hoverElement is WireInstance;
 				bool openSubchipOutputPinContextMenu = hoverElement is PinInstance pin2 && pin2.parent is SubChipInstance && pin2.IsSourcePin && !pin2.IsBusPin;
+				bool openNoteContextMenu = hoverElement is NoteInstance && !inCustomizeMenu;
 
-				if (openSubChipContextMenu || openDevPinContextMenu || openWireContextMenu || openSubchipOutputPinContextMenu)
+				if (openNoteContextMenu || openSubChipContextMenu || openDevPinContextMenu || openWireContextMenu || openSubchipOutputPinContextMenu)
 				{
 					interactionContextName = string.Empty;
 					interactionContext = hoverElement;
 					string headerName = string.Empty;
 
-					if (openSubChipContextMenu)
+					if (openNoteContextMenu)
+					{
+						headerName = "NOTE";
+						interactionContextName = "NOTE";
+						activeContextMenuEntries = entries_note;
+						Project.ActiveProject.controller.Select(interactionContext as IMoveable, false);
+					}
+					else if (openSubChipContextMenu)
 					{
 						SubChipInstance subChip = (SubChipInstance)hoverElement;
 						interactionContextName = subChip.Description.Name;
@@ -215,6 +239,13 @@ namespace DLS.Graphics
 					}
 
 					SetContextMenuOpen(headerName);
+				}
+				else if (hoverElement == null && Project.ActiveProject.CanEditViewedChip && !inCustomizeMenu)
+				{
+					interactionContextName = string.Empty;
+					interactionContext = null;
+					activeContextMenuEntries = entries_emptySpace;
+					SetContextMenuOpen("CREATE");
 				}
 				else
 				{
@@ -360,6 +391,7 @@ namespace DLS.Graphics
 			if (interactionContext is PinInstance pin)
 			{
 				pin.Colour = col;
+				pin.CustomColour = null; // clearing custom colour returns to enum-based colour
 			}
 			else if (interactionContext is SubChipInstance subchip)
 			{
@@ -368,9 +400,62 @@ namespace DLS.Graphics
 			
 		}
 
+		static bool CanPickCustomColour()
+		{
+			if (!CanSetCol()) return false;
+			return interactionContext is PinInstance;
+		}
+
+		static void OpenMoreColours()
+		{
+			UIDrawer.SetActiveMenu(UIDrawer.MenuType.ColorPicker);
+		}
+
+		// Called by ColorPickerMenu on confirm. Applies a custom colour to the pin and records it in recents.
+		public static void SetCustomColour(Color col)
+		{
+			if (interactionContext is not PinInstance pin) return;
+
+			pin.CustomColour = col;
+			AddRecentPinColour(col);
+		}
+
+		public static void AddRecentPinColour(Color col)
+		{
+			Project project = Project.ActiveProject;
+			project.description.RecentPinColours ??= new List<Color>();
+
+			// Remove existing entry (move to front) and cap the list length
+			project.description.RecentPinColours.RemoveAll(c => ColorsNearlyEqual(c, col));
+			project.description.RecentPinColours.Insert(0, col);
+			if (project.description.RecentPinColours.Count > RecentColoursLimit)
+			{
+				project.description.RecentPinColours.RemoveRange(RecentColoursLimit, project.description.RecentPinColours.Count - RecentColoursLimit);
+			}
+
+			// Persist recent colours to disk (project description is not otherwise auto-saved on exit)
+			project.SaveCurrentProjectDescription();
+		}
+
+		static bool ColorsNearlyEqual(Color a, Color b)
+		{
+			const float threshold = 1 / 255f;
+			return Mathf.Abs(a.r - b.r) < threshold && Mathf.Abs(a.g - b.g) < threshold && Mathf.Abs(a.b - b.b) < threshold;
+		}
+
 		static void OpenChipLabelPopup()
 		{
 			UIDrawer.SetActiveMenu(UIDrawer.MenuType.ChipLabelPopup);
+		}
+
+		static void OpenNoteEditMenu()
+		{
+			UIDrawer.SetActiveMenu(UIDrawer.MenuType.NoteEdit);
+		}
+
+		static void AddNoteOnEmptySpace()
+		{
+			Project.ActiveProject.controller.StartPlacingNote();
 		}
 
 		public static void EditWire()

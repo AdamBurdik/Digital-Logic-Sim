@@ -2,6 +2,7 @@ using System;
 using DLS.Description;
 using DLS.Graphics;
 using DLS.Simulation;
+using Seb.Helpers;
 using UnityEngine;
 
 namespace DLS.Game
@@ -19,6 +20,7 @@ namespace DLS.Game
 		public uint State; // sim state
 		public uint PlayerInputState; // dev input pins only
 		public PinColour Colour;
+		public Color? CustomColour; // Arbitrary colour overriding Colour (used for wire/pin colour picker). Null = use enum-based theme colour.
 		bool faceRight;
 		public float LocalPosY;
 		public string Name;
@@ -32,6 +34,7 @@ namespace DLS.Game
 			Address = address;
 			IsSourcePin = isSourcePin;
 			Colour = desc.Colour;
+			CustomColour = desc.CustomColour;
 
 			IsBusPin = parent is SubChipInstance subchip && subchip.IsBus;
 			faceRight = isSourcePin;
@@ -65,8 +68,8 @@ namespace DLS.Game
 			faceRight = IsSourcePin ^ flipped;
 		}
 
-		public Color GetColLow() => DrawSettings.ActiveTheme.StateLowCol[(int)Colour];
-		public Color GetColHigh() => DrawSettings.ActiveTheme.StateHighCol[(int)Colour];
+		public Color GetColLow() => CustomColour.HasValue ? ColHelper.Darken(CustomColour.Value, 0.55f, 0.15f) : DrawSettings.ActiveTheme.StateLowCol[(int)Colour];
+		public Color GetColHigh() => CustomColour.HasValue ? ColHelper.Brighten(CustomColour.Value, 0.05f, 0.1f) : DrawSettings.ActiveTheme.StateHighCol[(int)Colour];
 
 		public Color GetStateCol(int bitIndex, bool hover = false, bool canUsePlayerState = true)
 		{
@@ -74,8 +77,9 @@ namespace DLS.Game
 			uint state = PinState.GetBitTristatedValue(pinState, bitIndex);
 
 			if (state == PinState.LogicDisconnected) return DrawSettings.ActiveTheme.StateDisconnectedCol;
+			if (CustomColour.HasValue) return state == PinState.LogicHigh ? GetColHigh() : GetColLow();
 			return DrawSettings.GetStateColour(state == PinState.LogicHigh, (uint)Colour, hover);
-			
+
 		}
 	}
 }

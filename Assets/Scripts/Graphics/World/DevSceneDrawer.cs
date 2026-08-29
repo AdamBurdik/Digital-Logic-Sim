@@ -153,6 +153,11 @@ namespace DLS.Graphics
 							DrawSubChip(subchip);
 							break;
 						}
+						case NoteInstance note:
+						{
+							DrawNote(note);
+							break;
+						}
 					}
 				}
 
@@ -691,6 +696,36 @@ namespace DLS.Graphics
 			if (isInteracting)
 			{
 				InteractionState.NotifyElementUnderMouse(item);
+			}
+		}
+
+		public static void DrawNote(NoteInstance note)
+		{
+			Vector2 pos = note.Position;
+			Vector2 size = note.Size;
+
+			Color bgCol = new(1f, 0.97f, 0.68f);
+			Color outlineCol = new(0.8f, 0.76f, 0.4f);
+
+			float outlineWidth = 0.018f;
+			Draw.Quad(pos, size + Vector2.one * outlineWidth, outlineCol);
+			Draw.Quad(pos, size, bgCol);
+
+			// Draw text
+			if (!string.IsNullOrEmpty(note.Text))
+			{
+				Vector2 textPos = pos + new Vector2(-(size.x / 2) + NoteInstance.NotePaddingX, (size.y / 2) - NoteInstance.NotePaddingY);
+
+				using (Draw.BeginMaskScope(pos - size / 2, pos + size / 2))
+				{
+					Draw.Text(FontBold, note.Text, NoteInstance.NoteFontSize, textPos, Anchor.TopLeft, Color.black, NoteInstance.NoteLineSpacing);
+				}
+			}
+
+			// Mouse-over detection
+			if (InputHelper.MouseInsideBounds_World(pos, size))
+			{
+				InteractionState.NotifyElementUnderMouse(note);
 			}
 		}
 

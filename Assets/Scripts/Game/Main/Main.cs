@@ -88,7 +88,8 @@ namespace DLS.Game
 				Prefs_SimPaused = false,
 				AllCustomChipNames = Array.Empty<string>(),
 				StarredList = BuiltinCollectionCreator.GetDefaultStarredList().ToList(),
-				ChipCollections = new List<ChipCollection>(BuiltinCollectionCreator.CreateDefaultChipCollections())
+				ChipCollections = new List<ChipCollection>(BuiltinCollectionCreator.CreateDefaultChipCollections()),
+				RecentPinColours = new List<Color>()
 			};
 
 			Saver.SaveProjectDescription(initialDescription);

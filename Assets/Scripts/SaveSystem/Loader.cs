@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using DLS.Description;
 using DLS.Game;
+using UnityEngine;
 
 namespace DLS.SaveSystem
 {
@@ -40,6 +41,8 @@ namespace DLS.SaveSystem
 
 			ProjectDescription desc = Serializer.DeserializeProjectDescription(File.ReadAllText(path));
 			desc.ProjectName = projectName; // Enforce name = directory name (in case player modifies manually -- operations like deleting projects rely on this)
+
+			desc.RecentPinColours ??= new List<Color>();
 
 			for (int i = 0; i < desc.StarredList.Count; i++)
 			{

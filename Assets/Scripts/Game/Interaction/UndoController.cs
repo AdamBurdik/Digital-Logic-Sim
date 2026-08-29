@@ -114,6 +114,7 @@ namespace DLS.Game
 		{
 			List<SubChipInstance> subchips = elements.OfType<SubChipInstance>().ToList();
 			DevPinInstance[] devPins = elements.OfType<DevPinInstance>().ToArray();
+			NoteInstance[] notes = elements.OfType<NoteInstance>().ToArray();
 
 			// When deleting elements, store full state of ALL wires, not just those affected by the deletion.
 			// This is because other wires may be connected to the deleted wires (in which case their points are modified),
@@ -137,6 +138,7 @@ namespace DLS.Game
 				subchipDescriptions = subchips.Select(DescriptionCreator.CreateSubChipDescription).ToArray(),
 				pinDescriptions = devPins.Select(DescriptionCreator.CreatePinDescription).ToArray(),
 				pinInInputFlags = devPins.Select(p => p.IsInputPin).ToArray(),
+				noteDescriptions = notes.Select(DescriptionCreator.CreateNoteDescription).ToArray(),
 				wireStateBeforeDelete = wireState,
 				isDeleteAction = delete
 			};
@@ -288,6 +290,7 @@ namespace DLS.Game
 
 			public PinDescription[] pinDescriptions;
 			public bool[] pinInInputFlags;
+			public NoteDescription[] noteDescriptions;
 			public FullWireState wireStateBeforeDelete;
 
 			public bool isDeleteAction;
@@ -330,6 +333,25 @@ namespace DLS.Game
 					else
 					{
 						if (!devChip.TryDeleteDevPinByID(pinDescription.ID)) throw new Exception("Failed to delete dev pin");
+					}
+				}
+
+				// ---- Handle notes ----
+				for (int i = 0; i < noteDescriptions.Length; i++)
+				{
+					NoteDescription noteDesc = noteDescriptions[i];
+
+					if (addElement)
+					{
+						NoteInstance note = new(noteDesc.ID, noteDesc.Position, noteDesc.Text, noteDesc.Size);
+						devChip.AddNote(note, false);
+						Project.ActiveProject.controller.Select(note, true);
+					}
+					else
+					{
+						// Find and delete the note by ID
+						NoteInstance noteToDelete = devChip.Elements.OfType<NoteInstance>().FirstOrDefault(n => n.ID == noteDesc.ID);
+						if (noteToDelete != null) devChip.DeleteNote(noteToDelete);
 					}
 				}
 

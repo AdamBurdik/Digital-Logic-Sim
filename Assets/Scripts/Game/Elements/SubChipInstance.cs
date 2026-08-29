@@ -389,6 +389,7 @@ namespace DLS.Game
 					if (colInfo.PinID == pin.Address.PinID)
 					{
 						pin.Colour = colInfo.PinColour;
+						pin.CustomColour = colInfo.CustomColour;
 					}
 				}
 			}
