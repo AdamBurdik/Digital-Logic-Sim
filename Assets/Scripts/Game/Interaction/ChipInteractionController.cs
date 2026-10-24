@@ -13,6 +13,8 @@ namespace DLS.Game
 		public readonly Project project;
 
 		// ---- Selection and placement state ----
+		const float NudgeRepeatStartDelay = 0.5f;
+		const float NudgeRepeatInterval = 0.04f;
 		public readonly List<IMoveable> SelectedElements = new();
 		public List<WireInstance> DuplicatedWires = new();
 		public WireInstance WireToPlace;
@@ -24,6 +26,9 @@ namespace DLS.Game
 		public Vector2 SelectionBoxStartPos;
 		StraightLineMoveState straightLineMoveState;
 		bool hasExittedMultiModeSincePlacementStart;
+		Vector2Int nudgeDirection;
+		float nudgeLastManualTime;
+		float nudgeLastRepeatTime;
 
 		// ---- Wire edit state ----
 		public WireInstance wireToEdit;
@@ -186,13 +191,19 @@ namespace DLS.Game
 		void HandleKeyboardInput()
 		{
 			// Ignore shortcuts if don't have control
-			if (!HasControl) return;
+			if (!HasControl)
+			{
+				ResetNudgeRepeat();
+				return;
+			}
 
 			if (KeyboardShortcuts.UndoShortcutTriggered) ActiveDevChip.UndoController.TryUndo();
 			else if (KeyboardShortcuts.RedoShortcutTriggered) ActiveDevChip.UndoController.TryRedo();
 
 
 			if (!KeyboardShortcuts.StraightLineModeHeld) straightLineMoveState = StraightLineMoveState.None;
+
+			HandleNudgeInput();
 
 			if (KeyboardShortcuts.SearchShortcutTriggered)
 			{
@@ -233,6 +244,162 @@ namespace DLS.Game
 			{
 				CancelEverything();
 			}
+		}
+
+		void HandleNudgeInput()
+		{
+			bool canNudge = SelectedElements.Count > 0
+				&& !IsPlacingOrMovingElementOrCreatingWire
+				&& !IsCreatingSelectionBox
+				&& wireToEdit == null
+				&& !isMovingWireEditPoint;
+
+			if (!canNudge || !TryGetNudgeDirection(out Vector2Int direction, out bool pressedThisFrame))
+			{
+				ResetNudgeRepeat();
+				return;
+			}
+
+			if (pressedThisFrame)
+			{
+				nudgeDirection = direction;
+				nudgeLastManualTime = Time.time;
+				nudgeLastRepeatTime = Time.time;
+				ApplyNudge(direction);
+				return;
+			}
+
+			if (direction != nudgeDirection)
+			{
+				nudgeDirection = direction;
+				nudgeLastManualTime = Time.time;
+				nudgeLastRepeatTime = Time.time;
+				ApplyNudge(direction);
+				return;
+			}
+
+			bool initialDelayOver = Time.time - nudgeLastManualTime >= NudgeRepeatStartDelay;
+			bool canRepeat = Time.time - nudgeLastRepeatTime >= NudgeRepeatInterval;
+
+			if (initialDelayOver && canRepeat)
+			{
+				nudgeLastRepeatTime = Time.time;
+				ApplyNudge(direction);
+			}
+		}
+
+		static bool TryGetNudgeDirection(out Vector2Int direction, out bool pressedThisFrame)
+		{
+			pressedThisFrame = true;
+
+			if (KeyboardShortcuts.NudgeUpPressed)
+			{
+				direction = Vector2Int.up;
+				return true;
+			}
+
+			if (KeyboardShortcuts.NudgeDownPressed)
+			{
+				direction = Vector2Int.down;
+				return true;
+			}
+
+			if (KeyboardShortcuts.NudgeLeftPressed)
+			{
+				direction = Vector2Int.left;
+				return true;
+			}
+
+			if (KeyboardShortcuts.NudgeRightPressed)
+			{
+				direction = Vector2Int.right;
+				return true;
+			}
+
+			pressedThisFrame = false;
+
+			if (KeyboardShortcuts.NudgeUpHeld)
+			{
+				direction = Vector2Int.up;
+				return true;
+			}
+
+			if (KeyboardShortcuts.NudgeDownHeld)
+			{
+				direction = Vector2Int.down;
+				return true;
+			}
+
+			if (KeyboardShortcuts.NudgeLeftHeld)
+			{
+				direction = Vector2Int.left;
+				return true;
+			}
+
+			if (KeyboardShortcuts.NudgeRightHeld)
+			{
+				direction = Vector2Int.right;
+				return true;
+			}
+
+			direction = Vector2Int.zero;
+			return false;
+		}
+
+		void ApplyNudge(Vector2Int direction)
+		{
+			float step = DrawSettings.GridSize;
+
+			if (KeyboardShortcuts.NudgeHalfStepHeld) step *= 0.5f;
+			else if (KeyboardShortcuts.NudgeLargeStepHeld) step *= 4;
+
+			NudgeSelection(new Vector2(direction.x, direction.y) * step);
+		}
+
+		void NudgeSelection(Vector2 delta)
+		{
+			StartMovingSelectedItems();
+
+			foreach (IMoveable element in SelectedElements)
+			{
+				element.Position = element.MoveStartPosition + delta;
+			}
+
+			foreach (WireInstance wire in ActiveDevChip.Wires)
+			{
+				if (IsSelected(wire.SourcePin.parent) && IsSelected(wire.TargetPin.parent))
+				{
+					wire.MoveOffset = delta;
+				}
+			}
+
+			foreach (IMoveable element in SelectedElements)
+			{
+				bool legal = true;
+
+				if (element is not NoteInstance)
+				{
+					foreach (IMoveable obstacle in Obstacles)
+					{
+						if (element.BoundingBox.Overlaps(obstacle.BoundingBox))
+						{
+							legal = false;
+							break;
+						}
+					}
+				}
+
+				element.IsValidMovePos = legal;
+			}
+
+			FinishMovingElements();
+		}
+
+		void ResetNudgeRepeat()
+		{
+			nudgeDirection = Vector2Int.zero;
+			nudgeLastManualTime = 0;
+			nudgeLastRepeatTime = 0;
 		}
 
 		void HandleMouseInput()

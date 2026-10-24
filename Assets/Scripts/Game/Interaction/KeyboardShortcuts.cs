@@ -34,6 +34,18 @@ namespace DLS.Game
 		public static bool SimNextStepShortcutTriggered => InputHelper.IsKeyDownThisFrame(KeyCode.Space) && !InputHelper.CtrlIsHeld;
 		public static bool SimPauseToggleShortcutTriggered => CtrlShortcutTriggered(KeyCode.Space);
 
+		// ---- Selection movement shortcuts ----
+		public static bool NudgeUpPressed => InputHelper.IsKeyDownThisFrame(KeyCode.UpArrow);
+		public static bool NudgeDownPressed => InputHelper.IsKeyDownThisFrame(KeyCode.DownArrow);
+		public static bool NudgeLeftPressed => InputHelper.IsKeyDownThisFrame(KeyCode.LeftArrow);
+		public static bool NudgeRightPressed => InputHelper.IsKeyDownThisFrame(KeyCode.RightArrow);
+		public static bool NudgeUpHeld => InputHelper.IsKeyHeld(KeyCode.UpArrow);
+		public static bool NudgeDownHeld => InputHelper.IsKeyHeld(KeyCode.DownArrow);
+		public static bool NudgeLeftHeld => InputHelper.IsKeyHeld(KeyCode.LeftArrow);
+		public static bool NudgeRightHeld => InputHelper.IsKeyHeld(KeyCode.RightArrow);
+		public static bool NudgeLargeStepHeld => InputHelper.ShiftIsHeld;
+		public static bool NudgeHalfStepHeld => InputHelper.AltIsHeld;
+
 		// ---- Dev shortcuts ----
 		public static bool OpenSaveDataFolderShortcutTriggered => InputHelper.IsKeyDownThisFrame(KeyCode.O) && InputHelper.CtrlIsHeld && InputHelper.ShiftIsHeld && InputHelper.AltIsHeld;
 
