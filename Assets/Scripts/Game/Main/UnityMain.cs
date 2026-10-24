@@ -1,3 +1,4 @@
+using DLS.Discord;
 using DLS.Graphics;
 using DLS.Simulation;
 using Seb.Helpers;
@@ -70,6 +71,7 @@ namespace DLS.Game
 			audioUnity.audioState = audioState;
 
 			Main.Init(audioState);
+			DiscordPresence.Initialize();
 
 
 			if (openInMainMenu || !Application.isEditor) Main.LoadMainMenu();
@@ -154,12 +156,14 @@ namespace DLS.Game
 		void OnDestroy()
 		{
 			PlaytimeTracker.Flush();
+			DiscordPresence.Shutdown();
 			if (Project.ActiveProject != null) Project.ActiveProject.NotifyExit();
 		}
 
 		void OnApplicationQuit()
 		{
 			PlaytimeTracker.Flush();
+			DiscordPresence.Shutdown();
 		}
 
 		void OnApplicationPause(bool paused)
@@ -190,6 +194,7 @@ namespace DLS.Game
 			CameraController.Reset();
 			WorldDrawer.Reset();
 			PlaytimeTracker.Reset();
+			DiscordPresence.Reset();
 		}
 
 		[System.Serializable]

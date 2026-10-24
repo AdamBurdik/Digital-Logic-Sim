@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DLS.Description;
+using DLS.Discord;
 using DLS.Graphics;
 using DLS.SaveSystem;
 using UnityEngine;
@@ -33,6 +34,7 @@ namespace DLS.Game
 		public static void Update()
 		{
 			PlaytimeTracker.Update();
+			DiscordPresence.Update();
 
 			if (UIDrawer.ActiveMenu != UIDrawer.MenuType.MainMenu)
 			{

@@ -8,6 +8,7 @@ namespace DLS.Description
 		public int ResolutionY;
 		public FullScreenMode fullscreenMode;
 		public bool VSyncEnabled;
+		public bool DiscordRichPresenceDisabled;
 
 		public static AppSettings Default() =>
 			new()
@@ -15,7 +16,8 @@ namespace DLS.Description
 				ResolutionX = 1920,
 				ResolutionY = 1080,
 				fullscreenMode = FullScreenMode.FullScreenWindow,
-				VSyncEnabled = true
+				VSyncEnabled = true,
+				DiscordRichPresenceDisabled = false
 			};
 	}
 }

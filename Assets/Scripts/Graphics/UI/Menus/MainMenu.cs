@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using DLS.Description;
+using DLS.Discord;
 using DLS.Game;
 using DLS.SaveSystem;
 using DLS.Simulation;
@@ -24,11 +25,13 @@ namespace DLS.Graphics
 		static readonly UIHandle ID_ProjectNameInput = new("MainMenu_ProjectNameInputField");
 		static readonly UIHandle ID_DisplayResolutionWheel = new("MainMenu_DisplayResolutionWheel");
 		static readonly UIHandle ID_FullscreenWheel = new("MainMenu_FullscreenWheel");
+		static readonly UIHandle ID_DiscordPresenceWheel = new("MainMenu_DiscordPresenceWheel");
 		static readonly UIHandle ID_ProjectsScrollView = new("MainMenu_ProjectsScrollView");
 
 		static readonly string[] SettingsWheelFullScreenOptions = { "OFF", "MAXIMIZED", "BORDERLESS", "EXCLUSIVE" };
 		static readonly FullScreenMode[] FullScreenModes = { FullScreenMode.Windowed, FullScreenMode.MaximizedWindow, FullScreenMode.FullScreenWindow, FullScreenMode.ExclusiveFullScreen };
 		static readonly string[] SettingsWheelVSyncOptions = { "DISABLED", "ENABLED" };
+		static readonly string[] SettingsWheelDiscordPresenceOptions = { "ENABLED", "DISABLED" };
 
 		static readonly Func<string, bool> projectNameValidator = ProjectNameValidator;
 		static readonly UI.ScrollViewDrawContentFunc loadProjectScrollViewDrawer = DrawAllProjectsInScrollView;
@@ -340,6 +343,11 @@ namespace DLS.Graphics
 				UI.DrawText("VSync", theme.FontRegular, theme.FontSizeRegular, pos, Anchor.CentreLeft, Color.white);
 				int vsyncSetting = UI.WheelSelector(EditedAppSettings.VSyncEnabled ? 1 : 0, SettingsWheelVSyncOptions, new Vector2(elementOriginRight, pos.y), wheelSize, theme.OptionsWheel, Anchor.CentreRight);
 				EditedAppSettings.VSyncEnabled = vsyncSetting == 1;
+				pos += Vector2.down * 4;
+
+				UI.DrawText("Discord Presence", theme.FontRegular, theme.FontSizeRegular, pos, Anchor.CentreLeft, Color.white);
+				int discordPresenceSetting = UI.WheelSelector(EditedAppSettings.DiscordRichPresenceDisabled ? 1 : 0, SettingsWheelDiscordPresenceOptions, new Vector2(elementOriginRight, pos.y), wheelSize, theme.OptionsWheel, Anchor.CentreRight, enabled: DiscordPresence.IsConfigured);
+				EditedAppSettings.DiscordRichPresenceDisabled = discordPresenceSetting == 1;
 
 				// Background panel
 				UI.ModifyPanel(backgroundPanelID, UI.GetCurrentBoundsScope().Centre, UI.GetCurrentBoundsScope().Size + Vector2.one * 3, ColHelper.MakeCol255(37, 37, 43));

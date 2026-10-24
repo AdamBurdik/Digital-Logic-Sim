@@ -54,6 +54,7 @@ ExportedObj/
 
 # Unity3D generated file on crash reports
 sysinfo.txt
+mono_crash.*.blob
 
 # Builds
 *.apk
@@ -73,3 +74,7 @@ crashlytics-build.properties
 /.vsconfig
 
 launch-unity.sh
+
+.env
+.env.*
+!.env.example
