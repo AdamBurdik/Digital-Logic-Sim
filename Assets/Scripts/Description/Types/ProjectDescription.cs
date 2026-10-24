@@ -12,6 +12,7 @@ namespace DLS.Description
 		public string DLSVersion_EarliestCompatible;
 		public DateTime CreationTime;
 		public DateTime LastSaveTime;
+		public double PlaytimeSeconds;
 
 		// Prefs
 		public int Prefs_MainPinNamesDisplayMode;

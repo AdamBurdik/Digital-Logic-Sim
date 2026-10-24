@@ -16,6 +16,7 @@ namespace DLS.SaveSystem
 		public static readonly string ProjectsPath = Path.Combine(AllData, "Projects");
 		public static readonly string DeletedProjectsPath = Path.Combine(AllData, "Deleted Projects");
 		public static readonly string AppSettingsPath = Path.Combine(AllData, "AppSettings.json");
+		public static readonly string PlayerStatsPath = Path.Combine(AllData, "PlayerStats.json");
 
 		public static void EnsureDirectoryExists(string directoryPath) => Directory.CreateDirectory(directoryPath);
 

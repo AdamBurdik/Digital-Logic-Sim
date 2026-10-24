@@ -15,6 +15,7 @@ namespace DLS.Game
 		public static readonly Version DLSVersion_EarliestCompatible = new(2, 0, 0);
 		public const string LastUpdatedString = "5 May 2025";
 		public static AppSettings ActiveAppSettings;
+		public static PlayerStats ActivePlayerStats;
 
 		public static Project ActiveProject { get; private set; }
 
@@ -25,11 +26,14 @@ namespace DLS.Game
 		{
 			SavePaths.EnsureDirectoryExists(SavePaths.ProjectsPath);
 			SaveAndApplyAppSettings(Loader.LoadAppSettings());
+			ActivePlayerStats = Loader.LoadPlayerStats();
 			Main.audioState = audioState;
 		}
 
 		public static void Update()
 		{
+			PlaytimeTracker.Update();
+
 			if (UIDrawer.ActiveMenu != UIDrawer.MenuType.MainMenu)
 			{
 				CameraController.Update();
@@ -59,6 +63,7 @@ namespace DLS.Game
 
 		public static void LoadMainMenu()
 		{
+			PlaytimeTracker.OnProjectClosed();
 			UIDrawer.SetActiveMenu(UIDrawer.MenuType.MainMenu);
 		}
 
@@ -70,6 +75,7 @@ namespace DLS.Game
 			ActiveProject.LoadDevChipOrCreateNewIfDoesntExist(startupChipName);
 			ActiveProject.StartSimulation();
 			ActiveProject.audioState = audioState;
+			PlaytimeTracker.OnProjectOpened(ActiveProject);
 			UIDrawer.SetActiveMenu(UIDrawer.MenuType.None);
 		}
 

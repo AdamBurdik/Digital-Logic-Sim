@@ -13,6 +13,12 @@ namespace DLS.SaveSystem
 			WriteToFile(data, SavePaths.AppSettingsPath);
 		}
 
+		public static void SavePlayerStats(PlayerStats playerStats)
+		{
+			string data = Serializer.SerializePlayerStats(playerStats);
+			WriteToFile(data, SavePaths.PlayerStatsPath);
+		}
+
 		public static void SaveProjectDescription(ProjectDescription projectDescription)
 		{
 			projectDescription.LastSaveTime = DateTime.Now;
@@ -21,6 +27,29 @@ namespace DLS.SaveSystem
 
 			string data = Serializer.SerializeProjectDescription(projectDescription);
 			WriteToFile(data, SavePaths.GetProjectDescriptionPath(projectDescription.ProjectName));
+		}
+
+		public static void SaveProjectPlaytime(ProjectDescription projectDescription)
+		{
+			string path = SavePaths.GetProjectDescriptionPath(projectDescription.ProjectName);
+			ProjectDescription descriptionToSave = projectDescription;
+
+			if (File.Exists(path))
+			{
+				try
+				{
+					// Read the last saved description so that unsaved changes (e.g. open preferences menu) are not written out.
+					descriptionToSave = Loader.LoadProjectDescription(projectDescription.ProjectName);
+				}
+				catch (Exception)
+				{
+					descriptionToSave = projectDescription;
+				}
+			}
+
+			descriptionToSave.PlaytimeSeconds = projectDescription.PlaytimeSeconds;
+			string data = Serializer.SerializeProjectDescription(descriptionToSave);
+			WriteToFile(data, path);
 		}
 
 		public static void RenameProject(string nameOld, string nameNew)
@@ -36,6 +65,7 @@ namespace DLS.SaveSystem
 			SaveUtils.CopyDirectory(SavePaths.GetProjectPath(nameOriginal), SavePaths.GetProjectPath(nameDuplicate), true);
 			ProjectDescription descNew = Loader.LoadProjectDescription(nameDuplicate);
 			descNew.ProjectName = nameDuplicate;
+			descNew.PlaytimeSeconds = 0;
 			SaveProjectDescription(descNew);
 		}
 

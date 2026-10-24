@@ -21,6 +21,31 @@ namespace DLS.SaveSystem
 			return AppSettings.Default();
 		}
 
+		public static PlayerStats LoadPlayerStats()
+		{
+			try
+			{
+				if (File.Exists(SavePaths.PlayerStatsPath))
+				{
+					string statsString = File.ReadAllText(SavePaths.PlayerStatsPath);
+					PlayerStats stats = Serializer.DeserializePlayerStats(statsString);
+
+					if (double.IsNaN(stats.TotalPlaytimeSeconds) || double.IsInfinity(stats.TotalPlaytimeSeconds) || stats.TotalPlaytimeSeconds < 0)
+					{
+						stats.TotalPlaytimeSeconds = 0;
+					}
+
+					return stats;
+				}
+			}
+			catch (Exception e)
+			{
+				Debug.LogWarning("Failed to load player stats: " + e.Message);
+			}
+
+			return PlayerStats.Default();
+		}
+
 		public static Project LoadProject(string projectName)
 		{
 			ProjectDescription projectDescription = LoadProjectDescription(projectName);
@@ -43,6 +68,11 @@ namespace DLS.SaveSystem
 			desc.ProjectName = projectName; // Enforce name = directory name (in case player modifies manually -- operations like deleting projects rely on this)
 
 			desc.RecentPinColours ??= new List<Color>();
+
+			if (double.IsNaN(desc.PlaytimeSeconds) || double.IsInfinity(desc.PlaytimeSeconds) || desc.PlaytimeSeconds < 0)
+			{
+				desc.PlaytimeSeconds = 0;
+			}
 
 			for (int i = 0; i < desc.StarredList.Count; i++)
 			{

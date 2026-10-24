@@ -5,6 +5,7 @@ using DLS.Game;
 using DLS.SaveSystem;
 using DLS.Simulation;
 using Seb.Helpers;
+using Seb.Types;
 using Seb.Vis;
 using Seb.Vis.UI;
 using UnityEngine;
@@ -229,12 +230,19 @@ namespace DLS.Graphics
 				ButtonTheme buttonTheme = selected ? DrawSettings.ActiveUITheme.ProjectSelectionButtonSelected : DrawSettings.ActiveUITheme.ProjectSelectionButton;
 				if (!projectCompatibilities[i].compatible) buttonTheme.textCols.normal.a = 0.5f;
 
-				if (UI.Button(desc.ProjectName, buttonTheme, topLeft, new Vector2(width, 0), enabled, false, true, Anchor.TopLeft))
+				bool projectButtonPressed = UI.Button(desc.ProjectName, buttonTheme, topLeft, new Vector2(width, 0), enabled, false, true, Anchor.TopLeft, true, 1f);
+				Bounds2D rowBounds = UI.PrevBounds;
+
+				if (projectButtonPressed)
 				{
 					selectedProjectIndex = i;
 				}
 
-				topLeft = UI.PrevBounds.BottomLeft + Vector2.down * spacing;
+				Color playtimeCol = buttonTheme.textCols.normal;
+				playtimeCol.a *= 0.65f;
+				UI.DrawText(PlaytimeFormat.Compact(desc.PlaytimeSeconds), buttonTheme.font, buttonTheme.fontSize, rowBounds.CentreRight - Vector2.right * 1f, Anchor.TextCentreRight, playtimeCol);
+
+				topLeft = rowBounds.BottomLeft + Vector2.down * spacing;
 			}
 		}
 
@@ -472,14 +480,17 @@ namespace DLS.Graphics
 		{
 			DrawSettings.UIThemeDLS theme = DrawSettings.ActiveUITheme;
 			UI.DrawPanel(UI.BottomLeft, new Vector2(UI.Width, 4), ColHelper.MakeCol255(37, 37, 43), Anchor.BottomLeft);
+			Bounds2D barBounds = UI.PrevBounds;
 
 			float pad = 1;
 			Color col = new(1, 1, 1, 0.5f);
 
-			Vector2 versionPos = UI.PrevBounds.CentreLeft + Vector2.right * pad;
-			Vector2 datePos = UI.PrevBounds.CentreRight + Vector2.left * pad;
+			Vector2 versionPos = barBounds.CentreLeft + Vector2.right * pad;
+			Vector2 datePos = barBounds.CentreRight + Vector2.left * pad;
+			Vector2 playtimePos = barBounds.Centre;
 			UI.DrawText(authorString, theme.FontRegular, theme.FontSizeRegular, versionPos, Anchor.TextCentreLeft, col);
 			UI.DrawText(versionString, theme.FontRegular, theme.FontSizeRegular, datePos, Anchor.TextCentreRight, col);
+			UI.DrawText("Total playtime: " + PlaytimeFormat.Compact(Main.ActivePlayerStats.TotalPlaytimeSeconds), theme.FontRegular, theme.FontSizeRegular, playtimePos, Anchor.Centre, col);
 		}
 
 		static string ResolutionToString(Vector2Int r) => $"{r.x} x {r.y}";

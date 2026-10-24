@@ -153,7 +153,23 @@ namespace DLS.Game
 
 		void OnDestroy()
 		{
+			PlaytimeTracker.Flush();
 			if (Project.ActiveProject != null) Project.ActiveProject.NotifyExit();
+		}
+
+		void OnApplicationQuit()
+		{
+			PlaytimeTracker.Flush();
+		}
+
+		void OnApplicationPause(bool paused)
+		{
+			if (paused) PlaytimeTracker.Flush();
+		}
+
+		void OnApplicationFocus(bool focused)
+		{
+			if (!focused) PlaytimeTracker.Flush();
 		}
 
 		void OnValidate()
@@ -173,6 +189,7 @@ namespace DLS.Game
 			InteractionState.Reset();
 			CameraController.Reset();
 			WorldDrawer.Reset();
+			PlaytimeTracker.Reset();
 		}
 
 		[System.Serializable]

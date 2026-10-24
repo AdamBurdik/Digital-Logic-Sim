@@ -144,8 +144,10 @@ namespace DLS.Graphics
 				// Cancel / Confirm
 				if (result == MenuHelper.CancelConfirmResult.Cancel)
 				{
-					// Restore original description
+					// Restore original description, but keep playtime accumulated while the menu was open
+					double playtimeSeconds = project.description.PlaytimeSeconds;
 					project.description = originalProjectDesc;
+					project.description.PlaytimeSeconds = playtimeSeconds;
 					UIDrawer.SetActiveMenu(UIDrawer.MenuType.None);
 				}
 				else if (result == MenuHelper.CancelConfirmResult.Confirm)

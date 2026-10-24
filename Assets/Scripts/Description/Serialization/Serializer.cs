@@ -12,10 +12,12 @@ namespace DLS.Description
 		public static string SerializeAppSettings(AppSettings settings) => Serialize(settings);
 		public static string SerializeChipDescription(ChipDescription description) => Serialize(description);
 		public static string SerializeProjectDescription(ProjectDescription description) => Serialize(description);
+		public static string SerializePlayerStats(PlayerStats playerStats) => Serialize(playerStats);
 
 		public static AppSettings DeserializeAppSettings(string settingsString) => Deserialize<AppSettings>(settingsString);
 		public static ChipDescription DeserializeChipDescription(string serializedDescription) => Deserialize<ChipDescription>(serializedDescription);
 		public static ProjectDescription DeserializeProjectDescription(string serializedDescription) => Deserialize<ProjectDescription>(serializedDescription);
+		public static PlayerStats DeserializePlayerStats(string serializedPlayerStats) => Deserialize<PlayerStats>(serializedPlayerStats);
 
 		static JsonSerializerSettings CreateSerializationSettings()
 		{

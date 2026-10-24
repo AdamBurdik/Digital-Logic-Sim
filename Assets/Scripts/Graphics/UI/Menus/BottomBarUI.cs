@@ -379,6 +379,7 @@ namespace DLS.Graphics
 			{
 				if (exit)
 				{
+					PlaytimeTracker.OnProjectClosed();
 					Project.ActiveProject.NotifyExit();
 					UIDrawer.SetActiveMenu(UIDrawer.MenuType.MainMenu);
 				}
