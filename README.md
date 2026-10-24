@@ -18,6 +18,14 @@ All of my additions were vibecoded, I dont use Unity, I dont like unity, so expe
 
 ![Wires Showcase](./github/wire_colors.png)
 
+## Playtime
+
+![Playtime](./github/playtime.png)
+
+## Discord Rich Presence
+
+![Discord](./github/discord.png)
+
 # Info
 Just info I would find useful before doing this
 
