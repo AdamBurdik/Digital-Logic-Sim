@@ -16,6 +16,7 @@ namespace DLS.Description
 			{ ChipType.TriStateBuffer, "3-STATE BUFFER" },
 			// ---- Memory ----
 			{ ChipType.dev_Ram_8Bit, "dev.RAM-8" },
+			{ ChipType.dev_Ram_4096_8Bit, "dev.RAM-4096" },
 			{ ChipType.Rom_256x16, $"ROM 256{mulSymbol}16" },
 			// ---- Split / Merge ----
 			{ ChipType.Split_4To1Bit, "4-1BIT" },

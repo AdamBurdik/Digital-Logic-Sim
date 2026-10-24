@@ -39,6 +39,9 @@ namespace DLS.Simulation
 		public void PropagateSignal()
 		{
 			int length = ConnectedTargetPins.Length;
+
+			if (SimProfiler.Enabled) SimProfiler.PinPropagations += length;
+
 			for (int i = 0; i < length; i++)
 			{
 				ConnectedTargetPins[i].ReceiveInput(this);
@@ -56,6 +59,7 @@ namespace DLS.Simulation
 			}
 
 			bool set;
+			uint previousState = State;
 
 			if (numInputsReceivedThisFrame > 0)
 			{
@@ -88,6 +92,9 @@ namespace DLS.Simulation
 				latestSourceParentChipID = source.parentChip.ID;
 			}
 
+			if (isInput && State != previousState) parentChip.MarkDirty();
+
+			if (SimProfiler.Enabled) SimProfiler.InputsReceived++;
 			numInputsReceivedThisFrame++;
 
 			// If this is a sub-chip input pin, and has received all of its connections, notify the sub-chip that the input is ready

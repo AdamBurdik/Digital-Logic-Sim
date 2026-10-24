@@ -47,6 +47,7 @@ namespace DLS.Simulation
 
 		public static void RunSimulationStep(SimChip rootSimChip, DevPinInstance[] inputPins, SimAudio audioState)
 		{
+			SimProfiler.BeginTick();
 			Simulator.audioState = audioState;
 			audioState.InitFrame();
 
@@ -66,7 +67,9 @@ namespace DLS.Simulation
 				try
 				{
 					SimPin simPin = rootSimChip.GetSimPinFromAddress(input.Pin.Address);
+					uint previousState = simPin.State;
 					PinState.Set(ref simPin.State, input.Pin.PlayerInputState);
+					if (simPin.State != previousState) rootSimChip.MarkDirty();
 
 					input.Pin.State = input.Pin.PlayerInputState;
 				}
@@ -79,15 +82,20 @@ namespace DLS.Simulation
 			// Process
 			if (needsOrderPass)
 			{
+				SimProfiler.BeginOrderPass();
 				StepChipReorder(rootSimChip);
+				SimProfiler.EndOrderPass();
 				needsOrderPass = false;
 			}
 			else
 			{
+				SimProfiler.BeginNormalPass();
 				StepChip(rootSimChip);
+				SimProfiler.EndNormalPass();
 			}
 
 			UpdateAudioState();
+			SimProfiler.EndTick();
 		}
 
 		public static void UpdateInPausedState()
@@ -111,34 +119,63 @@ namespace DLS.Simulation
 		// Recursively propagate signals through this chip and its subchips
 		static void StepChip(SimChip chip)
 		{
+			if (!chip.NeedsVisit)
+			{
+				if (SimProfiler.Enabled) SimProfiler.ChipsSkipped++;
+				return;
+			}
+
+			if (SimProfiler.Enabled)
+			{
+				SimProfiler.ChipsVisited++;
+				SimProfiler.ChipsProcessed++;
+			}
+
 			// Propagate signal from all input dev-pins to all their connected pins
 			chip.Sim_PropagateInputs();
+			chip.dirty = false;
 
 			// NOTE: subchips are assumed to have been sorted in reverse order of desired visitation
 			for (int i = chip.SubChips.Length - 1; i >= 0; i--)
 			{
 				SimChip nextSubChip = chip.SubChips[i];
 
+				if (!nextSubChip.NeedsVisit)
+				{
+					if (SimProfiler.Enabled) SimProfiler.ChipsSkipped++;
+					continue;
+				}
+
 				// Every n frames (for performance reasons) the simulation permits some random modifications to the chip traversal order.
 				// Here two chips may be swapped if they are not 'ready' (i.e. all inputs have not yet been received for this
 				// frame; indicating that the input relies on the output). The purpose of this reordering is to allow some variety in
 				// the outcomes of race-conditions (such as an SR latch having both inputs enabled, and then released).
-				if (canDynamicReorderThisFrame && i > 0 && !nextSubChip.Sim_IsReady() && RandomBool())
+				if (canDynamicReorderThisFrame && i > 0 && nextSubChip.IsRunnable && !nextSubChip.Sim_IsReady() && RandomBool())
 				{
 					SimChip potentialSwapChip = chip.SubChips[i - 1];
-					if (!ChipTypeHelper.IsBusOriginType(potentialSwapChip.ChipType))
+					if (potentialSwapChip.IsRunnable && !ChipTypeHelper.IsBusOriginType(potentialSwapChip.ChipType))
 					{
 						nextSubChip = potentialSwapChip;
 						(chip.SubChips[i], chip.SubChips[i - 1]) = (chip.SubChips[i - 1], chip.SubChips[i]);
 					}
 				}
 
-				if (nextSubChip.IsBuiltin) ProcessBuiltinChip(nextSubChip); // We've reached a built-in chip, so process it directly
-				else StepChip(nextSubChip); // Recursively process custom chip
+				if (nextSubChip.IsBuiltin)
+				{
+					nextSubChip.dirty = false;
+					if (SimProfiler.Enabled) SimProfiler.BuiltinsProcessed++;
+					ProcessBuiltinChip(nextSubChip); // We've reached a built-in chip, so process it directly
+				}
+				else
+				{
+					StepChip(nextSubChip); // Recursively process custom chip
+				}
 
 				// Step 3) Forward the outputs of the processed subchip to connected pins
 				nextSubChip.Sim_PropagateOutputs();
 			}
+
+			chip.RecalculateActiveDescendant();
 		}
 
 		// Recursively propagate signals through this chip and its subchips
@@ -146,7 +183,14 @@ namespace DLS.Simulation
 		// Note: the order here is reversed, so those ready first will be at the end of the array
 		static void StepChipReorder(SimChip chip)
 		{
+			if (SimProfiler.Enabled)
+			{
+				SimProfiler.ChipsVisited++;
+				SimProfiler.ChipsProcessed++;
+			}
+
 			chip.Sim_PropagateInputs();
+			chip.dirty = false;
 
 			SimChip[] subChips = chip.SubChips;
 			int numRemaining = subChips.Length;
@@ -163,12 +207,22 @@ namespace DLS.Simulation
 				numRemaining--;
 
 				// Process chosen subchip
-				if (nextSubChip.ChipType == ChipType.Custom) StepChipReorder(nextSubChip); // Recursively process custom chip
-				else ProcessBuiltinChip(nextSubChip); // We've reached a built-in chip, so process it directly 
+				if (nextSubChip.ChipType == ChipType.Custom)
+				{
+					StepChipReorder(nextSubChip); // Recursively process custom chip
+				}
+				else
+				{
+					nextSubChip.dirty = false;
+					if (SimProfiler.Enabled) SimProfiler.BuiltinsProcessed++;
+					ProcessBuiltinChip(nextSubChip); // We've reached a built-in chip, so process it directly
+				}
 
 				// Step 3) Forward the outputs of the processed subchip to connected pins
 				nextSubChip.Sim_PropagateOutputs();
 			}
+
+			chip.RecalculateActiveDescendant();
 		}
 
 		static int ChooseNextSubChip(SimChip[] subChips, int num)
@@ -490,6 +544,42 @@ namespace DLS.Simulation
 
 					break;
 				}
+				case ChipType.dev_Ram_4096_8Bit:
+				{
+					const int wordCount = 4096;
+
+					uint dataPin = chip.InputPins[0].State;
+					uint addressAPin = chip.InputPins[1].State;
+					uint addressBPin = chip.InputPins[2].State;
+					uint writeEnablePin = chip.InputPins[3].State;
+					uint clockPin = chip.InputPins[4].State;
+					uint resetPin = chip.InputPins[5].State;
+
+					int address = (PinState.GetBitStates(addressAPin) | (PinState.GetBitStates(addressBPin) << 8)) & 0xFFF;
+
+					// Detect clock rising edge
+					bool clockHigh = PinState.FirstBitHigh(clockPin);
+					bool isRisingEdge = clockHigh && chip.InternalState[^1] == 0;
+					chip.InternalState[^1] = clockHigh ? 1u : 0;
+
+					bool resetHigh = PinState.FirstBitHigh(resetPin);
+					if (resetHigh)
+					{
+						// Async reset: clear all words and force output low while asserted.
+						for (int i = 0; i < wordCount; i++)
+						{
+							chip.InternalState[i] = 0;
+						}
+					}
+					else if (isRisingEdge && PinState.FirstBitHigh(writeEnablePin))
+					{
+						chip.InternalState[address] = PinState.GetBitStates(dataPin);
+					}
+
+					chip.OutputPins[0].State = resetHigh ? 0u : chip.InternalState[address];
+
+					break;
+				}
 				case ChipType.Rom_256x16:
 				{
 					const int ByteMask = 0b11111111;
@@ -547,12 +637,18 @@ namespace DLS.Simulation
 
 			SimChip simChip = new(chipDesc, subChipID, internalState, subchips);
 
+			for (int i = 0; i < subchips.Length; i++)
+			{
+				subchips[i].parentChip = simChip;
+			}
 
 			// Create connections
 			for (int i = 0; i < chipDesc.Wires.Length; i++)
 			{
 				simChip.AddConnection(chipDesc.Wires[i].SourcePinAddress, chipDesc.Wires[i].TargetPinAddress);
 			}
+
+			simChip.RecalculateActiveDescendant();
 
 			return simChip;
 		}

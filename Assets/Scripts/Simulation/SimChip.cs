@@ -19,7 +19,14 @@ namespace DLS.Simulation
 		public int numInputsReady;
 		public SimPin[] OutputPins = Array.Empty<SimPin>();
 		public SimChip[] SubChips = Array.Empty<SimChip>();
+		public SimChip parentChip;
 
+		public bool dirty = true;
+		public bool hasActiveDescendant;
+		public bool alwaysTick;
+
+		public bool IsRunnable => dirty || alwaysTick;
+		public bool NeedsVisit => dirty || alwaysTick || hasActiveDescendant;
 
 		public SimChip()
 		{
@@ -32,6 +39,7 @@ namespace DLS.Simulation
 			ID = id;
 			ChipType = desc.ChipType;
 			IsBuiltin = ChipType != ChipType.Custom;
+			alwaysTick = ChipType is ChipType.Clock or ChipType.Key or ChipType.Pulse or ChipType.Buzzer;
 
 			// ---- Create pins (don't allocate unnecessarily as very many sim chips maybe created!) ----
 			if (desc.InputPins.Length > 0)
@@ -77,6 +85,19 @@ namespace DLS.Simulation
 					InternalState[i] = BitConverter.ToUInt32(randomBytes);
 				}
 			}
+			else if (ChipType is ChipType.dev_Ram_4096_8Bit)
+			{
+				const int addressSize_4096_8Bit = 4096;
+				InternalState = new uint[addressSize_4096_8Bit + 1]; // +1 for clock state (to allow edge-trigger behaviour)
+
+				// Initialize memory contents to random state
+				Span<byte> randomBytes = stackalloc byte[4];
+				for (int i = 0; i < InternalState.Length - 1; i++)
+				{
+					Simulator.rng.NextBytes(randomBytes);
+					InternalState[i] = BitConverter.ToUInt32(randomBytes);
+				}
+			}
 			// Load in serialized persistent state (rom data, etc.)
 			else if (internalState is { Length: > 0 })
 			{
@@ -111,6 +132,35 @@ namespace DLS.Simulation
 		}
 
 		public bool Sim_IsReady() => numInputsReady == numConnectedInputs;
+
+		public void MarkDirty()
+		{
+			if (dirty) return;
+			dirty = true;
+			if (SimProfiler.Enabled) SimProfiler.DirtyChips++;
+			parentChip?.MarkActiveDescendant();
+		}
+
+		public void MarkActiveDescendant()
+		{
+			if (hasActiveDescendant) return;
+			hasActiveDescendant = true;
+			parentChip?.MarkActiveDescendant();
+		}
+
+		public void RecalculateActiveDescendant()
+		{
+			for (int i = 0; i < SubChips.Length; i++)
+			{
+				if (SubChips[i].NeedsVisit)
+				{
+					hasActiveDescendant = true;
+					return;
+				}
+			}
+
+			hasActiveDescendant = false;
+		}
 		
 		public (bool success, SimChip chip) TryGetSubChipFromID(int id)
 		{
@@ -201,6 +251,7 @@ namespace DLS.Simulation
 		public void RemoveSubChip(int id)
 		{
 			SubChips = SubChips.Where(s => s.ID != id).ToArray();
+			RecalculateActiveDescendant();
 		}
 
 
@@ -230,6 +281,8 @@ namespace DLS.Simulation
 		{
 			Array.Resize(ref SubChips, SubChips.Length + 1);
 			SubChips[^1] = subChip;
+			subChip.parentChip = this;
+			MarkActiveDescendant();
 		}
 
 		public void AddConnection(PinAddress sourcePinAddress, PinAddress targetPinAddress)

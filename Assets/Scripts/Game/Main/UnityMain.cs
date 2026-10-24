@@ -56,7 +56,10 @@ namespace DLS.Game
 		public int waveIts = 20;
 		public bool songTestMode;
 		public NoteTest[] notes;
-		
+
+		string profilerMessage;
+		float profilerMessageUntil;
+
 		// References
 		public static UnityMain instance;
 		AudioUnity audioUnity;
@@ -85,8 +88,34 @@ namespace DLS.Game
 			refNoteFreq = SimAudio.CalculateFrequency(refIndex / (double)numNoteDivisions);
 			if (Application.isEditor) EditorDebugUpdate();
 
+			if (InputHelper.IsKeyDownThisFrame(KeyCode.F3))
+			{
+				SimProfiler.Enabled = !SimProfiler.Enabled;
+				profilerMessage = SimProfiler.Enabled ? "SimProfiler enabled" : "SimProfiler disabled";
+				profilerMessageUntil = Time.unscaledTime + 2f;
+				Debug.Log("[SimProfiler] " + (SimProfiler.Enabled ? "enabled" : "disabled"));
+			}
+
 			if (songTestMode) SongTest();
 			else Main.Update();
+		}
+
+		void OnGUI()
+		{
+			const float lineHeight = 22f;
+			float y = 10f;
+
+			if (SimProfiler.Enabled)
+			{
+				string text = $"[SimProfiler] tick {SimProfiler.LastTickMs:0.00}ms | visited {SimProfiler.ChipsVisited} processed {SimProfiler.ChipsProcessed} skipped {SimProfiler.ChipsSkipped} builtins {SimProfiler.BuiltinsProcessed} pins {SimProfiler.PinPropagations} inputs {SimProfiler.InputsReceived} dirty {SimProfiler.DirtyChips}";
+				GUI.Label(new Rect(10f, y, 1400f, lineHeight), text);
+				y += lineHeight;
+			}
+
+			if (Time.unscaledTime < profilerMessageUntil)
+			{
+				GUI.Label(new Rect(10f, y, 400f, lineHeight), profilerMessage);
+			}
 		}
 
 		void SongTest()

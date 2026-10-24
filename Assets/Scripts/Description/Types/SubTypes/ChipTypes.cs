@@ -47,7 +47,10 @@ namespace DLS.Description
 		BusTerminus_8Bit,
 		
 		// ---- Audio ----
-		Buzzer
+		Buzzer,
+
+		// ---- Memory (appended to keep existing enum values stable) ----
+		dev_Ram_4096_8Bit
 
 	}
 }

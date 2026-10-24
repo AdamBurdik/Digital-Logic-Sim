@@ -312,7 +312,8 @@ namespace DLS.Game
 
 		public Color GetColour(int bitIndex)
 		{
-			Color col = IsFullyConnected ? SourcePin.GetStateCol(bitIndex, false, false) : DrawSettings.ActiveTheme.StateDisconnectedCol;
+			bool usePlayerState = IsFullyConnected && SourcePin.parent is DevPinInstance && Project.ActiveProject != null && Project.ActiveProject.CanEditViewedChip;
+			Color col = IsFullyConnected ? SourcePin.GetStateCol(bitIndex, false, usePlayerState) : DrawSettings.ActiveTheme.StateDisconnectedCol;
 
 			if (bitCount != PinBitCount.Bit1 && bitIndex % 2 == 0)
 			{

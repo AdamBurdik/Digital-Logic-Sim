@@ -29,6 +29,7 @@ namespace DLS.Game
 				CreatePulse(),
 				// ---- Memory ----
 				dev_CreateRAM_8(),
+				dev_CreateRAM_4096_8(),
 				CreateROM_8(),
 				// ---- Merge / Split ----
 				CreateBitConversionChip(ChipType.Split_4To1Bit, PinBitCount.Bit4, PinBitCount.Bit1, 1, 4),
@@ -98,6 +99,25 @@ namespace DLS.Game
 			Vector2 size = new(GridSize * 10, SubChipInstance.MinChipHeightForPins(inputPins, outputPins));
 
 			return CreateBuiltinChipDescription(ChipType.dev_Ram_8Bit, size, col, inputPins, outputPins);
+		}
+
+		static ChipDescription dev_CreateRAM_4096_8()
+		{
+			Color col = new(0.85f, 0.45f, 0.3f);
+
+			PinDescription[] inputPins =
+			{
+				CreatePinDescription("D", 0, PinBitCount.Bit8),
+				CreatePinDescription("ADDR-A", 1, PinBitCount.Bit8),
+				CreatePinDescription("ADDR-B", 2, PinBitCount.Bit4),
+				CreatePinDescription("WE", 3),
+				CreatePinDescription("CLK", 4),
+				CreatePinDescription("RST", 5)
+			};
+			PinDescription[] outputPins = { CreatePinDescription("Q", 6, PinBitCount.Bit8) };
+			Vector2 size = new(GridSize * 12, SubChipInstance.MinChipHeightForPins(inputPins, outputPins));
+
+			return CreateBuiltinChipDescription(ChipType.dev_Ram_4096_8Bit, size, col, inputPins, outputPins);
 		}
 
 		static ChipDescription CreateROM_8()
